@@ -1,0 +1,189 @@
+List the cities with the most reviews in descending order:
+
+	SQL code used to arrive at answer:
+
+------------------------------------------------------------------
+ 
+SELECT
+-- select cities and sum the total number of reviews
+city,
+SUM(review_count) AS total_reviews --alias for readability
+FROM business
+--group by city for sum of reviews in all cities
+GROUP BY city
+--order from most reviews to least reviews
+ORDER BY total_reviews DESC
+
+------------------------------------------------------------------
+
+	The Result:
+  
+	+-----------------+---------------+
+	| city            | total_reviews |
+	+-----------------+---------------+
+	| Las Vegas       |         82854 |
+	| Phoenix         |         34503 |
+	| Toronto         |         24113 |
+	| Scottsdale      |         20614 |
+	| Charlotte       |         12523 |
+	| Henderson       |         10871 |
+	| Tempe           |         10504 |
+	| Pittsburgh      |          9798 |
+	| Montréal        |          9448 |
+	| Chandler        |          8112 |
+	| Mesa            |          6875 |
+	| Gilbert         |          6380 |
+	| Cleveland       |          5593 |
+	| Madison         |          5265 |
+	| Glendale        |          4406 |
+	| Mississauga     |          3814 |
+	| Edinburgh       |          2792 |
+	| Peoria          |          2624 |
+	| North Las Vegas |          2438 |
+	| Markham         |          2352 |
+	| Champaign       |          2029 |
+	| Stuttgart       |          1849 |
+	| Surprise        |          1520 |
+	| Lakewood        |          1465 |
+	| Goodyear        |          1155 |
+	+-----------------+---------------+
+  
+------------------------------------------------------------------
+  
+ Find the top 3 users based on their total number of reviews:
+
+	SQL code used to arrive at answer:
+
+------------------------------------------------------------------
+SELECT
+name,
+review_count
+FROM user
+-- order from most reviews to least reviews
+ORDER BY review_count DESC
+-- we only want the top three, so we use limit
+LIMIT 3
+------------------------------------------------------------------
+
+	The Result:
+
+	+--------+--------------+
+	| name   | review_count |
+	+--------+--------------+
+	| Gerald |         2000 |
+	| Sara   |         1629 |
+	| Yuri   |         1339 |
+	+--------+--------------+
+  
+------------------------------------------------------------------
+  
+Find the top 10 users with the most fans:
+SQL code used to arrive at answer:
+
+------------------------------------------------------------------
+
+SELECT
+id,
+name,
+fans
+FROM user
+-- order from most to least fans
+ORDER BY fans DESC
+-- limit so we only get top ten
+LIMIT 10
+
+------------------------------------------------------------------
+
+	The Result:
+
+	+------------------------+-----------+------+
+	| id                     | name      | fans |
+	+------------------------+-----------+------+
+	| -9I98YbNQnLdAmcYfb324Q | Amy       |  503 |
+	| -8EnCioUmDygAbsYZmTeRQ | Mimi      |  497 |
+	| --2vR0DIsmQ6WfcSzKWigw | Harald    |  311 |
+	| -G7Zkl1wIWBBmD0KRy_sCw | Gerald    |  253 |
+	| -0IiMAZI2SsQ7VmyzJjokQ | Christine |  173 |
+	| -g3XIcCb2b-BD0QBCcq2Sw | Lisa      |  159 |
+	| -9bbDysuiWeo2VShFJJtcw | Cat       |  133 |
+	| -FZBTkAZEXoP7CYvRV2ZwQ | William   |  126 |
+	| -9da1xk7zgnnfO1uTVYGkA | Fran      |  124 |
+	| -lh59ko3dxChBSZ9U7LfUw | Lissa     |  120 |
+	+------------------------+-----------+------+
+  
+  
+------------------------------------------------------------------
+  
+I wanted to see if positive sentiment in the reviews can predict the likelihood of a business
+still being open. I found that some positive words are actually predictive of the business closing.
+It is possible that there is some sort of strange effect or there are flaws in my sentiment analysis.
+It should be noted that this is a very rudimentary sentiment analysis. I could preform a much more
+in depth sentiment analysis using Word2Vec in Python.
+
+SQL code used for analysis:
+
+------------------------------------------------------------------
+SELECT
+-- select average number of stars and average number of reviews
+AVG(business.stars) AS average_stars,
+AVG(business.review_count) AS average_number_of_reviews,
+-- finds the probability of a positive word being included in review
+AVG(CASE
+    WHEN review.text LIKE '%good%'
+    OR review.text LIKE '%great'
+    OR review.text LIKE '%fantastic'
+    OR review.text LIKE '%delicious'
+    OR review.text LIKE '%tasty'
+    OR review.text LIKE '%positive'
+    THEN 1
+    ELSE 0
+END) AS positive_word_probability,
+is_open
+FROM Business
+-- join review for sentiment analysis
+INNER JOIN review
+ON business.id = review.business_id
+-- group by is_open so we can see the average rating and number of ratings for open vs closed restaurants
+GROUP BY is_open
+------------------------------------------------------------------
+  
+I would like to test to see if the frequency of keywords related to heat is higher in the southern united states than elsewhere
+in the world. Once again, this is a rudimentary sentiment analysis which could be significantly improved on Python. The
+code is meant to demonstrate SQL competency. I used the longitude and latitude to create an outline of the 'south', then analyzed
+text looking for keywords related to heat or warmth.
+
+------------------------------------------------------------------
+
+The Result:
+
+SELECT
+-- Group businesses into two groups, either in south or not in south
+CASE
+    WHEN business.latitude >= 20 AND business.latitude <=35
+    AND business.longitude <= -50 AND business.longitude >= -130 THEN 'in_south'
+    ELSE 'not_in_south'
+END AS InSouth,
+
+-- create a list of keywords related to heat we would like to include, one hot encoded for analysis
+AVG(CASE
+    WHEN review.text LIKE '%hot%'
+    OR review.text LIKE '%humid%'
+    OR review.text LIKE '%warm%'
+    OR review.text LIKE '%spicy%'
+    OR review.text LIKE '%spice%'
+    OR review.text LIKE '%scortching%'
+    OR review.text LIKE '%boiling%'
+    OR review.text LIKE '%firey%'
+    OR review.text LIKE '%sweltering%'
+    OR review.text LIKE '%sizzl%' --for sizzle or sizzling
+    OR review.text LIKE '%steam%'
+    THEN 1
+    ELSE 0
+END) AS contains_hot_word
+
+FROM business
+-- inner join the reviews for keyword matching
+INNER JOIN review
+ON business.id = review.business_id
+GROUP BY InSouth
+------------------------------------------------------------------
